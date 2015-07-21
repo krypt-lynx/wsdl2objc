@@ -1,40 +1,30 @@
+
 @class %«className»Response;
 @class %«className»Operation;
+%FOREACH operation in operations
+@class %«className»_%«operation.className»;
+%ENDFOR
 
-@protocol %«className»ResponseDelegate <NSObject>
-- (void) operation:(%«className»Operation *)operation completedWithResponse:(%«className»Response *)response;
+typedef void (^%«className»SuccessBlock)(NSArray *headers, NSArray *bodyParts);
+typedef void (^%«className»ErrorBlock)(NSError *error);
 
-@end
-
-#define kServerAnchorCertificates   @"kServerAnchorCertificates"
-#define kServerAnchorsOnly          @"kServerAnchorsOnly"
-#define kClientIdentity             @"kClientIdentity"
-#define kClientCertificates         @"kClientCertificates"
-#define kClientUsername             @"kClientUsername"
-#define kClientPassword             @"kClientPassword"
-#define kNSURLCredentialPersistence @"kNSURLCredentialPersistence"
-#define kValidateResult             @"kValidateResult"
-
-@interface %«className» : NSObject <%«className»ResponseDelegate> {
-	NSURL *address;
-	NSTimeInterval timeout;
-	NSMutableArray *cookies;
-	NSMutableDictionary *customHeaders;
-	BOOL logXMLInOut;
-	BOOL ignoreEmptyResponse;
-	BOOL synchronousOperationComplete;
-	id<SSLCredentialsManaging> sslManager;
-	SOAPSigner *soapSigner;
-}
-
+@interface %«className» : NSObject
 @property (nonatomic, copy) NSURL *address;
 @property (nonatomic) BOOL logXMLInOut;
 @property (nonatomic) BOOL ignoreEmptyResponse;
 @property (nonatomic) NSTimeInterval timeout;
-@property (nonatomic, retain) NSMutableArray *cookies;
-@property (nonatomic, retain) NSMutableDictionary *customHeaders;
-@property (nonatomic, retain) id<SSLCredentialsManaging> sslManager;
-@property (nonatomic, retain) SOAPSigner *soapSigner;
+@property (nonatomic, strong) NSMutableArray *cookies;
+@property (nonatomic, strong) NSMutableDictionary *customHeaders;
+@property (nonatomic, strong) id <SSLCredentialsManaging> sslManager;
+@property (nonatomic, strong) SOAPSigner *soapSigner;
+
+%FOREACH header in inputHeaders
+%IF header.type.isEnum
+@property(nonatomic) %«header.type.variableTypeName» %«header.name»Header;
+%ELSE
+@property(nonatomic, strong) %«header.type.variableTypeName» %«header.name»Header;
+%ENDIF
+%ENDFOR
 
 + (NSTimeInterval) defaultTimeout;
 
@@ -45,80 +35,49 @@
 
 %FOREACH operation in operations
 - (%«className»Response *)%«operation.invokeString»;
-- (void)%«operation.asyncInvokeString» delegate:(id<%«className»ResponseDelegate>)responseDelegate;
+- (%«className»_%«operation.className»*)%«operation.invokeString» success:(%«className»SuccessBlock)success error:(%«className»ErrorBlock)error;
 %ENDFOR
-
 @end
 
-@interface %«className»Operation : NSOperation {
-	%«className» *binding;
-	%«className»Response *response;
-	id<%«className»ResponseDelegate> delegate;
-	NSMutableData *responseData;
-	NSURLConnection *urlConnection;
-}
+@interface %«className»Operation : NSOperation <NSURLConnectionDelegate>
+@property(nonatomic, strong) %«className» *binding;
+@property(nonatomic, strong, readonly) %«className»Response *response;
+@property(nonatomic, strong) NSMutableData *responseData;
+@property(nonatomic, strong) NSURLConnection *urlConnection;
 
-@property (nonatomic, retain) %«className» *binding;
-@property (nonatomic, readonly) %«className»Response *response;
-@property (nonatomic, assign) id<%«className»ResponseDelegate> delegate;
-@property (nonatomic, retain) NSMutableData *responseData;
-@property (nonatomic, retain) NSURLConnection *urlConnection;
+- (id)initWithBinding:(%«className» *)aBinding success:(%«className»SuccessBlock)success error:(%«className»ErrorBlock)error;
 
-- (id)initWithBinding:(%«className» *)aBinding delegate:(id<%«className»ResponseDelegate>)aDelegate;
+/**
+ * Cancels connection. Response has error with code kCFURLErrorCancelled in domain kCFErrorDomainCFNetwork.
+ */
+- (void)cancel;
 
 @end
 
 %FOREACH operation in operations
-@interface %«className»_%«operation.className» : %«className»Operation {
-%FOREACH part in operation.input.body.parts
-%IFDEF part.element.type.classNameWithPtr
-	%«part.element.type.classNameWithPtr» %«part.name»;
+@interface %«className»_%«operation.className» : %«className»Operation
+%FOREACH part in operation.input.bodyParts
+%IF part.type.isEnum
+@property(nonatomic) %«part.type.variableTypeName» %«part.name»;
+%ELSE
+@property(nonatomic, strong) %«part.type.variableTypeName» %«part.name»;
 %ENDIF
 %ENDFOR
-%FOREACH header in operation.input.headers
-%IFDEF header.type.classNameWithPtr
-	%«header.type.classNameWithPtr» %«header.name»;
-%ENDIF
-%ENDFOR
-}
 
-%FOREACH part in operation.input.body.parts
-@property (nonatomic, %«part.element.type.assignOrRetain») %«part.element.type.classNameWithPtr» %«part.name»;
-%ENDFOR
-%FOREACH header in operation.input.headers
-@property (nonatomic, %«header.type.assignOrRetain») %«header.type.classNameWithPtr» %«header.name»;
-%ENDFOR
-
-- (id)initWithBinding:(%«className» *)aBinding delegate:(id<%«className»ResponseDelegate>)aDelegate
-%FOREACH part in operation.input.body.parts
-	%«part.name»:(%«part.element.type.classNameWithPtr»)a%«part.uname»
-%ENDFOR
-%FOREACH header in operation.input.headers
-	%«header.name»:(%«header.type.classNameWithPtr»)a%«header.uname»
+- (id)initWithBinding:(%«className» *)aBinding success:(%«className»SuccessBlock)success error:(%«className»ErrorBlock)error
+%FOREACH part in operation.input.bodyParts
+	%«part.name»:(%«part.type.variableTypeName»)a%«part.uname»
 %ENDFOR
 ;
-
 @end
 %ENDFOR
 
-@interface %«className»_envelope : NSObject {
-
-}
-
-+ (%«className»_envelope *)sharedInstance;
-
-- (NSString *)serializedFormUsingHeaderElements:(NSDictionary *)headerElements bodyElements:(NSDictionary *)bodyElements bodyKeys:(NSArray *)bodyKeys;
-
+@interface %«className»_envelope : NSObject
++ (NSString *)serializedFormUsingDelegate:(id)delegate;
 @end
 
-@interface %«className»Response : NSObject {
-	NSArray *headers;
-	NSArray *bodyParts;
-	NSError *error;
-}
-
-@property (nonatomic, retain) NSArray *headers;
-@property (nonatomic, retain) NSArray *bodyParts;
-@property (nonatomic, retain) NSError *error;
-
+@interface %«className»Response : NSObject
+@property(nonatomic, strong) NSArray *headers;
+@property(nonatomic, strong) NSArray *bodyParts;
+@property(nonatomic, strong) NSError *error;
 @end

@@ -1,16 +1,16 @@
 /*
  Copyright (c) 2008 LightSPEED Technologies, Inc.
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,77 +22,44 @@
 
 #import "USService.h"
 
-#import "USPort.h"
-#import "USObjCKeywords.h"
 #import "NSBundle+USAdditions.h"
+#import "NSString+USAdditions.h"
+#import "NSXMLElement+Children.h"
+#import "USPort.h"
 
 @implementation USService
++ (instancetype)serviceWithElement:(NSXMLElement *)el schema:(USSchema *)schema {
+    NSString *name = [[el attributeForName:@"name"] stringValue];
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"addTagToServiceName"] boolValue])
+        name = [name stringByAppendingString:@"Svc"];
 
-@synthesize name;
-@synthesize ports;
-@synthesize schema;
-@dynamic className;
-
-- (id)init
-{
-	if((self = [super init])) {
-		self.name = nil;
-		self.ports = [NSMutableArray array];
-		self.schema = nil;
-	}
-	
-	return self;
+    USService *service = [USService new];
+    service.name = name;
+    NSMutableArray *ports = [NSMutableArray new];
+    for (NSXMLElement *child in [el childElementsWithName:@"port"]) {
+        USPort *port = [USPort portWithElement:child schema:schema];
+        if (port)
+            [ports addObject:port];
+    }
+    service.ports = ports;
+    return service;
 }
 
-- (void) dealloc
-{
-    [name release];
-    [ports release];
-    [super dealloc];
+- (NSString *)className {
+	return [self.name stringByRemovingIllegalCharacters];
 }
 
-- (USPort *)portForName:(NSString *)aName
-{
-	for(USPort *port in self.ports) {
-		if([port.name isEqualToString:aName]) {
-			return port;
-		}
-	}
-	
-	USPort *newPort = [USPort new];
-	newPort.service = self;
-	newPort.name = aName;
-	[self.ports addObject:newPort];
-    [newPort release];
-	
-	return newPort;
-}
-
-- (NSString *)className
-{
-	return [[self.name componentsSeparatedByCharactersInSet:kIllegalClassCharactersSet] componentsJoinedByString:@""];
-}
-
-- (NSString *)templateFileHPath
-{
+- (NSString *)templateFileHPath {
 	return [[NSBundle mainBundle] pathForTemplateNamed:@"Service_H"];
 }
 
-- (NSString *)templateFileMPath
-{
+- (NSString *)templateFileMPath {
 	return [[NSBundle mainBundle] pathForTemplateNamed:@"Service_M"];
 }
 
-- (NSDictionary *)templateKeyDictionary
-{
-	NSMutableDictionary *returning = [NSMutableDictionary dictionary];
-	
-	[returning setObject:self.name forKey:@"name"];
-	[returning setObject:self.className forKey:@"className"];
-	[returning setObject:self.ports forKey:@"ports"];
-	[returning setObject:self.schema forKey:@"schema"];
-	
-	return returning;
+- (NSDictionary *)templateKeyDictionary {
+    return @{@"name": self.name,
+             @"className": self.className,
+             @"ports": self.ports};
 }
-
 @end

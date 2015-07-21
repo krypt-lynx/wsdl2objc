@@ -1,4 +1,9 @@
 #import "%«prefix».h"
+
+#import "NSDate+ISO8601Parsing.h"
+#import "NSDate+ISO8601Unparsing.h"
+#import "xsd.h"
+
 #import <libxml/xmlstring.h>
 #if TARGET_OS_IPHONE
 #import <CFNetwork/CFNetwork.h>
@@ -11,3 +16,21 @@
 #if ADVANCED_AUTHENTICATION && TARGET_OS_IPHONE
 #import <Security/Security.h>
 #endif
+
+static Class classForElement(xmlNodePtr cur) {
+    NSString *instanceType = [NSString stringWithXmlString:xmlGetNsProp(cur, (const xmlChar *)"type", (const xmlChar *)"http://www.w3.org/2001/XMLSchema-instance")
+                                                     free:YES];
+    if (!instanceType) return nil;
+
+    NSArray *elementTypeArray = [instanceType componentsSeparatedByString:@":"];
+    if ([elementTypeArray count] > 1) {
+        NSString *prefix = elementTypeArray[0];
+        NSString *localName = elementTypeArray[1];
+        xmlNsPtr elementNamespace = xmlSearchNs(cur->doc, cur, [prefix xmlString]);
+        NSString *standardPrefix = USGlobals.sharedInstance.wsdlStandardNamespaces[[NSString stringWithXmlString:(xmlChar*)elementNamespace->href free:NO]];
+
+        return NSClassFromString([NSString stringWithFormat:@"%@_%@", standardPrefix, localName]);
+    }
+
+    return NSClassFromString([instanceType stringByReplacingOccurrencesOfString:@":" withString:@"_"]);
+}

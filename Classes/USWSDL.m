@@ -9,10 +9,10 @@
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,80 +23,23 @@
  */
 
 #import "USWSDL.h"
+
+#import "USAttribute.h"
 #import "USSchema.h"
-#import "USType.h"
-#import "USMessage.h"
-#import "USPortType.h"
+
+@interface USWSDL ()
+@property (nonatomic, strong) NSMutableDictionary *schemaPrefixes;
+@end
 
 @implementation USWSDL
+- (id)init {
+	if (!(self = [super init])) return nil;
 
-@synthesize schemas;
-@synthesize targetNamespace;
+    self.schemas = [NSMutableDictionary new];
+    self.schemaPrefixes = [NSMutableDictionary new];
 
-- (id)init
-{
-	if((self = [super init]))
-	{
-		self.schemas = [NSMutableArray array];
-		self.targetNamespace = nil;
-	}
-	return self;
-}
-
-- (void)dealloc
-{
-	[schemas release];
-    [targetNamespace release];
-	[super dealloc];
-}
-
-- (USSchema *)schemaForNamespace:(NSString *)aNamespace
-{
-	for(USSchema *schema in self.schemas) {
-		if([schema.fullName isEqualToString:aNamespace]) {
-			return schema;
-		}
-	}
-	
-	USSchema *newSchema = [[USSchema alloc] initWithWSDL:self];
-	newSchema.fullName = aNamespace;
-	[self.schemas addObject:newSchema];
-    [newSchema release];
-	
-	return newSchema;
-}
-
-- (USSchema *)existingSchemaForPrefix:(NSString *)aPrefix
-{
-	if(aPrefix == nil) return nil;
-	
-	for(USSchema *schema in self.schemas) {
-		if([schema.prefix isEqualToString:aPrefix]) {
-			return schema;
-		}
-	}
-	
-	return nil;
-}
-
-- (USType *)typeForNamespace:(NSString *)aNamespace name:(NSString *)aName
-{
-	USSchema *schema = [self schemaForNamespace:aNamespace];
-	
-	if(schema) {
-		USType *type = [schema typeForName:aName];
-		return type;
-	}
-	
-	return nil;
-}
-
-- (void)addXSDSchema
-{
-	USSchema *xsd = [self schemaForNamespace:@"http://www.w3.org/2001/XMLSchema"];
-	xsd.prefix = @"xsd";
-	
-	[xsd addSimpleClassWithName:@"boolean" representationClass:@"USBoolean *"];
+    USSchema *xsd = [self createSchemaForNamespace:@"http://www.w3.org/2001/XMLSchema" prefix:@"xsd"];
+	[xsd addSimpleClassWithName:@"boolean" representationClass:@"NSNumber *"];
 	[xsd addSimpleClassWithName:@"byte" representationClass:@"NSNumber *"];
 	[xsd addSimpleClassWithName:@"int" representationClass:@"NSNumber *"];
 	[xsd addSimpleClassWithName:@"integer" representationClass:@"NSNumber *"];
@@ -128,6 +71,37 @@
 	[xsd addSimpleClassWithName:@"ID" representationClass:@"NSString *"];
 	[xsd addSimpleClassWithName:@"ENTITY" representationClass:@"NSString *"];
 	[xsd addSimpleClassWithName:@"IDREF" representationClass:@"NSString *"];
+	[xsd addSimpleClassWithName:@"NMTOKEN" representationClass:@"NSString *"];
+
+    USSchema *xml = [self createSchemaForNamespace:@"http://www.w3.org/XML/1998/namespace" prefix:@"xml"];
+    USAttribute *attr = [USAttribute new];
+    attr.name = @"lang";
+    attr.wsdlName = @"lang";
+    attr.type = xsd.types[@"string"];
+    [xml registerAttribute:attr];
+
+	return self;
+}
+
+- (USSchema *)createSchemaForNamespace:(NSString *)xmlNS prefix:(NSString *)prefix {
+    USSchema *schema = [[USSchema alloc] initWithWSDL:self];
+    schema.fullName = xmlNS;
+    schema.prefix = prefix;
+    for (int i = 2; self.schemaPrefixes[schema.prefix]; ++i)
+        schema.prefix = [NSString stringWithFormat:@"%@%d", prefix, i];
+
+    assert(!self.schemas[xmlNS]);
+    self.schemas[xmlNS] = schema;
+    self.schemaPrefixes[schema.prefix] = schema;
+    return schema;
+}
+
+- (USSchema *)schemaForPrefix:(NSString *)prefix {
+    return self.schemaPrefixes[prefix];
+}
+
+- (NSDictionary *)templateKeyDictionary {
+    return @{@"schemas": [self.schemas allValues]};
 }
 
 @end

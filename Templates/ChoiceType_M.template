@@ -1,0 +1,29 @@
+@implementation %«className»
++ (id)deserializeNode:(xmlNodePtr)cur {
+    NSMutableArray *ret = nil;
+    for (xmlNodePtr child = cur->children; child; child = child->next) {
+        if (cur->type != XML_ELEMENT_NODE) continue;
+%FOREACH element in choices
+        else if (xmlStrEqual(child->name, (const xmlChar *)"%«element.wsdlName»")) {
+            Class elementClass = classForElement(child) ?: [%«element.type.className» class];
+%IF element.isArray
+            if (!ret) ret = [NSMutableArray new];
+            [ret addObject:[elementClass deserializeNode:child]];
+%ELSE
+            return [elementClass deserializeNode:child];
+%ENDIF
+        }
+%ENDFOR
+    }
+    return ret;
+}
+
++ (void)serializeToChildOf:(xmlNodePtr)node withName:(const char *)childName value:(%«variableTypeName»)value {
+    xmlNodePtr child = xmlNewChild(node, NULL, (const xmlChar *)childName, NULL);
+    if (false);
+%FOREACH element in choices
+    else if ([value isMemberOfClass:[%«element.type.className» class]])
+        [%«element.type.className» serializeToChildOf:child withName:"%«prefix»:%«element.wsdlName»" value:value];
+%ENDFOR
+}
+@end

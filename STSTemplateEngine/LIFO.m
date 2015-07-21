@@ -1,15 +1,3 @@
-//
-//	LIFO.m
-//	A LIFO Stack Library ver 1.00
-//
-//	Provides a universal LIFO stack class for storage of generic objects.
-//
-//	Created by benjk on 7/15/05.
-//
-//	This software is released as open source under the terms of the new BSD
-//	License obtained from http://www.opensource.org/licenses/bsd-license.php
-//	on Tuesday, July 19, 2005.  The full license text follows below.
-//
 //	Copyright 2005 Sunrise Telephone Systems Ltd. All rights reserved.
 //
 //	Redistribution and use in source and binary forms, with or without modi-
@@ -35,89 +23,36 @@
 //	LIABILITY,  WHETHER  IN  CONTRACT,  STRICT LIABILITY,  OR TORT  (INCLUDING
 //	NEGLIGENCE OR OTHERWISE)  ARISING  IN  ANY  WAY  OUT  OF  THE  USE OF THIS
 //	SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
 
 #import "LIFO.h"
 
+@interface LIFO ()
+@property (nonatomic, strong) NSMutableArray *stack;
+@end
+
 @implementation LIFO
-
-// private method: initialise instance
-- (id)init {
-	self = [super init];
-	return self;
-} // end method
-
-// private method: deallocate instance
-- (void)dealloc {
-    [_stack release];
-	[super dealloc];
-} // end method
-
-// ---------------------------------------------------------------------------
-// Class Method:  stackWithCapacity:
-// ---------------------------------------------------------------------------
-//
-// Creates a new instance of LIFO with capacity depth.
-
-+ (LIFO *)stackWithCapacity:(unsigned)depth;
++ (LIFO *)stackWithCapacity:(unsigned)depth
 {
-	LIFO *thisInstance = [[[LIFO alloc] init] autorelease];
-	
-	thisInstance->_stack = [[NSMutableArray alloc] initWithCapacity:depth];
+	LIFO *thisInstance = [[LIFO alloc] init];
+	thisInstance.stack = [[NSMutableArray alloc] initWithCapacity:depth];
 	return thisInstance;
-} // end method
+}
 
-// ---------------------------------------------------------------------------
-// Instance Method:  count
-// ---------------------------------------------------------------------------
-//
-// Returns the number of objects on the receiver's stack.
-
-- (unsigned)count;
+- (unsigned)count
 {
-	return [self->_stack count];
-} // end method
+    return [self.stack count];
+}
 
-// ---------------------------------------------------------------------------
-// Instance Method:  pushObject:
-// ---------------------------------------------------------------------------
-//
-// Places an object on top of the receiver's stack. If anObject is nil, an
-// NSInvalidArgumentException is raised.
-
-- (void)pushObject:(id)anObject;
+- (void)pushObject:(id)anObject
 {
-	NSException *exception;
-	
-	if (anObject == nil) {
-		exception = [NSException exceptionWithName:NSInvalidArgumentException
-											reason:@"object must not be nil" userInfo:nil];
-		[exception raise];
-	}
-	else {
-		[self->_stack addObject:anObject];
-	} // end if
-} // end method
+    [self.stack addObject:anObject];
+}
 
-// ---------------------------------------------------------------------------
-// Instance Method:  popObject:
-// ---------------------------------------------------------------------------
-//
-// Removes the top most object from the receiver's stack and returns it.
-// Returns nil if the receiver's stack is empty.
-
-- (id)popObject;
+- (id)popObject
 {
-	NSObject *theObject = [self->_stack lastObject];
-	
-	if (theObject == nil) {
-		return nil;
-	}
-	else {
-		[theObject retain];
-		[self->_stack removeLastObject];
-		return [theObject autorelease];
-	} // end if
-} // end method
-
-@end // LIFO
+	NSObject *theObject = [self.stack lastObject];
+	if (theObject)
+		[self.stack removeLastObject];
+    return theObject;
+}
+@end

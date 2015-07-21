@@ -1,16 +1,16 @@
 /*
- Copyright (c) 2008 LightSPEED Technologies, Inc.
- 
+ Copyright (c) 2013 7x7 Labs, Inc.
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,20 +22,20 @@
 
 #import <Foundation/Foundation.h>
 
+@class USMessage;
 @class USSchema;
-@class USOperation;
 
-@interface USPortType : NSObject {
-	NSString *name;
-	NSMutableArray *operations;
-	
-	USSchema *schema;
-}
+@interface USPortTypeOperation : NSObject
+@property (nonatomic, strong) NSString *name;
+@property (nonatomic, strong) USMessage *input;
+@property (nonatomic, strong) USMessage *output;
 
++ (USPortTypeOperation *)operationWithElement:(NSXMLElement *)el schema:(USSchema *)schema;
+@end
+
+@interface USPortType : NSObject
 @property (nonatomic, copy) NSString *name;
-@property (nonatomic, retain) NSMutableArray *operations;
-@property (nonatomic, assign) USSchema *schema;
+@property (nonatomic, strong) NSDictionary *operations;
 
-- (USOperation *)operationForName:(NSString *)aName;
-
++ (USPortType *)portTypeWithElement:(NSXMLElement *)el schema:(USSchema *)schema;
 @end

@@ -1,0 +1,120 @@
+@implementation %«className»
++ (%«variableTypeName»)deserializeNode:(xmlNodePtr)node {
+%IFEQ variableTypeName NSData *
+    xmlChar *str = xmlNodeListGetString(node->doc, node->children, 1);
+    NSData *data = [NSData dataWithBase64EncodedString:(const char *)str];
+    xmlFree(str);
+    return data;
+%ELSE
+    NSString *str = [NSString stringWithXmlString:xmlNodeListGetString(node->doc, node->children, 1) free:YES];
+%IFEQ typeName boolean
+    return @([str boolValue]);
+%ELSIFEQ typeName byte
+    return @([str intValue]);
+%ELSIFEQ typeName int
+    return @([str intValue]);
+%ELSIFEQ typeName integer
+    return @([str intValue]);
+%ELSIFEQ typeName nonNegativeInteger
+    return @([str intValue]);
+%ELSIFEQ typeName positiveInteger
+    return @([str intValue]);
+%ELSIFEQ typeName unsignedByte
+    return @([str intValue]);
+%ELSIFEQ typeName unsignedInt
+    return @([str intValue]);
+%ELSIFEQ typeName double
+    return @([str doubleValue]);
+%ELSIFEQ typeName long
+    return @([str longLongValue]);
+%ELSIFEQ typeName unsignedLong
+    return @([str intValue]);
+%ELSIFEQ typeName short
+    return @([str intValue]);
+%ELSIFEQ typeName unsignedShort
+    return @([str intValue]);
+%ELSIFEQ typeName float
+    return @([str doubleValue]);
+%ELSIFEQ variableTypeName NSDate *
+    return [NSDate dateWithISO8601String:str];
+%ELSIFEQ typeName decimal
+    return [NSDecimalNumber decimalNumberWithString:str];
+%ELSIFEQ variableTypeName NSString *
+    return str;
+%ELSIFEQ variableTypeName NSNumber *
+    return @([str doubleValue]);
+%ELSE
+#warning Not handling node with type %«typeName» (%«variableTypeName»)
+    return nil;
+%ENDIF
+%ENDIF
+}
+
++ (%«variableTypeName»)deserializeAttribute:(const char *)attrName ofNode:(xmlNodePtr)node {
+%IFEQ variableTypeName NSData *
+    xmlChar *str = xmlGetProp(node, (const xmlChar *)attrName);
+    NSData *data = [NSData dataWithBase64EncodedString:(const char *)str ?: ""];
+    xmlFree(str);
+    return data;
+%ELSE
+    NSString *attrString = [NSString stringWithXmlString:xmlGetProp(node, (const xmlChar *)attrName) free:YES];
+    if (!attrString) return nil;
+%IFEQ typeName boolean
+    return @([attrString boolValue]);
+%ELSIFEQ typeName byte
+    return @([attrString intValue]);
+%ELSIFEQ typeName int
+    return @([attrString intValue]);
+%ELSIFEQ typeName integer
+    return @([attrString intValue]);
+%ELSIFEQ typeName nonNegativeInteger
+    return @([attrString intValue]);
+%ELSIFEQ typeName positiveInteger
+    return @([attrString intValue]);
+%ELSIFEQ typeName unsignedByte
+    return @([attrString intValue]);
+%ELSIFEQ typeName unsignedInt
+    return @([attrString intValue]);
+%ELSIFEQ typeName double
+    return @([attrString doubleValue]);
+%ELSIFEQ typeName long
+    return @([attrString longLongValue]);
+%ELSIFEQ typeName unsignedLong
+    return @([attrString intValue]);
+%ELSIFEQ typeName short
+    return @([attrString intValue]);
+%ELSIFEQ typeName unsignedShort
+    return @([attrString intValue]);
+%ELSIFEQ typeName float
+    return @([attrString doubleValue]);
+%ELSIFEQ variableTypeName NSDate *
+    return [NSDate dateWithISO8601String:attrString];
+%ELSIFEQ typeName decimal
+    return [NSDecimalNumber decimalNumberWithString:attrString];
+%ELSIFEQ variableTypeName NSString *
+    return attrString;
+%ELSIFEQ variableTypeName NSNumber *
+    return @([attrString doubleValue]);
+%ELSE
+#warning Not handling attribute with type %«typeName» (%«variableTypeName»)
+    return nil;
+%ENDIF
+%ENDIF
+}
+
++ (void)serializeToChildOf:(xmlNodePtr)node withName:(const char *)childName value:(%«variableTypeName»)value {
+    if (value)
+%IFEQ variableTypeName NSData *
+        xmlNewChild(node, NULL, (const xmlChar *)childName, [[value base64Encoding] xmlString]);
+%ELSE
+        xmlNewChild(node, NULL, (const xmlChar *)childName, [[value description] xmlString]);
+%ENDIF
+}
+
++ (void)serializeToProperty:(const char *)property onNode:(xmlNodePtr)node
+                      value:(%«variableTypeName»)value
+{
+    if (value)
+        xmlSetProp(node, (const xmlChar *)property, [[value description] xmlString]);
+}
+@end

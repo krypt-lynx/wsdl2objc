@@ -1,16 +1,16 @@
 /*
- Copyright (c) 2008 LightSPEED Technologies, Inc.
- 
+ Copyright (c) 2013 7x7 Labs, Inc.
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,47 +22,42 @@
 
 #import "USPortType.h"
 
-#import "USOperation.h"
+#import "NSXMLElement+Children.h"
+#import "USSchema.h"
+
+@implementation USPortTypeOperation
++ (USPortTypeOperation *)operationWithElement:(NSXMLElement *)el schema:(USSchema *)schema {
+    USPortTypeOperation *operation = [USPortTypeOperation new];
+    operation.name = [[el attributeForName:@"name"] stringValue];
+
+    for (NSXMLElement *child in [el childElements]) {
+        NSString *localName = [child localName];
+        if ([localName isEqualToString:@"input"]) {
+            [schema withMessageFromElement:child attrName:@"message" call:^(USMessage *message) {
+                operation.input = message;
+            }];
+        }
+        else if ([localName isEqualToString:@"output"]) {
+            [schema withMessageFromElement:child attrName:@"message" call:^(USMessage *message) {
+                operation.output = message;
+            }];
+        }
+    }
+    return operation;
+}
+@end
 
 @implementation USPortType
++ (USPortType *)portTypeWithElement:(NSXMLElement *)el schema:(USSchema *)schema {
+    USPortType *portType = [USPortType new];
+    portType.name = [[el attributeForName:@"name"] stringValue];
 
-@synthesize name;
-@synthesize operations;
-@synthesize schema;
-
-- (id)init
-{
-	if((self = [super init])) {
-		self.name = nil;
-		self.operations = [NSMutableArray array];
-		self.schema = nil;
-	}
-	
-	return self;
+    NSMutableDictionary *operations = [NSMutableDictionary new];
+    for (NSXMLElement *child in [el childElementsWithName:@"operation"]) {
+        USPortTypeOperation *operation = [USPortTypeOperation operationWithElement:child schema:schema];
+        operations[operation.name] = operation;
+    }
+    portType.operations = operations;
+    return portType;
 }
-
-- (void) dealloc
-{
-    [name release];
-    [operations release];
-    [super dealloc];
-}
-
-- (USOperation *)operationForName:(NSString *)aName
-{
-	for(USOperation *operation in self.operations) {
-		if([operation.name isEqualToString:aName]) {
-			return operation;
-		}
-	}
-	
-	USOperation *newOperation = [USOperation new];
-	newOperation.name = aName;
-	newOperation.portType = self;
-	[self.operations addObject:newOperation];
-    [newOperation release];
-	
-	return newOperation;
-}
-
 @end
